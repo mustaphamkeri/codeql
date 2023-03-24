@@ -17,6 +17,7 @@ struct SwiftMangledName {
   explicit operator bool() const { return !parts.empty(); }
 
   std::string str() const;
+  std::string hash() const;
 
   // let's avoid copying as long as we don't need it
   SwiftMangledName() = default;
@@ -24,6 +25,8 @@ struct SwiftMangledName {
   SwiftMangledName& operator=(const SwiftMangledName&) = delete;
   SwiftMangledName(SwiftMangledName&&) = default;
   SwiftMangledName& operator=(SwiftMangledName&&) = default;
+
+  SwiftMangledName& operator<<(Part&& part) &;
 
   // streaming labels or ints into a SwiftMangledName just appends them
   SwiftMangledName& operator<<(UntypedTrapLabel label) &;

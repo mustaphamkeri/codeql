@@ -22,7 +22,7 @@ class SwiftMangler : private swift::TypeVisitor<SwiftMangler, SwiftMangledName>,
   using DeclVisitor = swift::DeclVisitor<SwiftMangler, SwiftMangledName>;
 
  public:
-  explicit SwiftMangler(SwiftDispatcher& dispatcher) : dispatcher(dispatcher) {}
+  virtual ~SwiftMangler() = default;
 
   static SwiftMangledName mangleModuleName(std::string_view name);
 
@@ -93,15 +93,29 @@ class SwiftMangler : private swift::TypeVisitor<SwiftMangler, SwiftMangledName>,
   SwiftMangledName visitParametrizedProtocolType(const swift::ParameterizedProtocolType* type);
 
  private:
-  template <typename E>
-  UntypedTrapLabel fetch(E&& e);
+  virtual SwiftMangledName::Part fetch(const swift::Decl* decl) = 0;
+  virtual SwiftMangledName::Part fetch(const swift::TypeBase* type) = 0;
+  SwiftMangledName::Part fetch(swift::Type type) { return fetch(type.getPointer()); }
 
   static SwiftMangledName initMangled(const swift::TypeBase* type);
   SwiftMangledName initMangled(const swift::Decl* decl);
   SwiftMangledName visitTypeDiscriminatedValueDecl(const swift::ValueDecl* decl);
+};
 
-  swift::Mangle::ASTMangler mangler;
+class SwiftTrapMangler : public SwiftMangler {
+ public:
+  explicit SwiftTrapMangler(SwiftDispatcher& dispatcher) : dispatcher(dispatcher) {}
+
+ private:
+  SwiftMangledName::Part fetch(const swift::Decl* decl) override;
+  SwiftMangledName::Part fetch(const swift::TypeBase* type) override;
+
   SwiftDispatcher& dispatcher;
+};
+
+class SwiftRecursiveMangler : public SwiftMangler {
+  SwiftMangledName::Part fetch(const swift::Decl* decl) override;
+  SwiftMangledName::Part fetch(const swift::TypeBase* type) override;
 };
 
 }  // namespace codeql

@@ -1,5 +1,7 @@
 #include "swift/extractor/infra/SwiftMangledName.h"
 
+#include <picosha2.h>
+
 namespace codeql {
 
 namespace {
@@ -17,6 +19,20 @@ void appendPart(std::string& out, unsigned index) {
   out += std::to_string(index);
 }
 
+void hashPart(picosha2::hash256_one_by_one& out, const std::string& prefix) {
+  out.process(prefix.begin(), prefix.end());
+}
+
+void hashPart(picosha2::hash256_one_by_one& out, UntypedTrapLabel label) {
+  auto bytes = reinterpret_cast<char*>(&label);
+  out.process(bytes, bytes + sizeof(label));
+}
+
+void hashPart(picosha2::hash256_one_by_one& out, unsigned index) {
+  auto bytes = reinterpret_cast<char*>(&index);
+  out.process(bytes, bytes + sizeof(index));
+}
+
 }  // namespace
 
 std::string SwiftMangledName::str() const {
@@ -25,6 +41,22 @@ std::string SwiftMangledName::str() const {
     std::visit([&](const auto& contents) { appendPart(out, contents); }, part);
   }
   return out;
+}
+
+std::string SwiftMangledName::hash() const {
+  auto hasher = picosha2::hash256_one_by_one();
+  for (const auto& part : parts) {
+    std::visit([&](const auto& contents) { hashPart(hasher, contents); }, part);
+  }
+  hasher.finish();
+  auto ret = get_hash_hex_string(hasher);
+  ret.resize(ret.size() / 2);
+  return ret;
+}
+
+SwiftMangledName& SwiftMangledName::operator<<(SwiftMangledName::Part&& part) & {
+  parts.emplace_back(std::move(part));
+  return *this;
 }
 
 SwiftMangledName& SwiftMangledName::operator<<(UntypedTrapLabel label) & {

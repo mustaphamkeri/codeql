@@ -10,5 +10,6 @@ swift_cc_library(
         "//swift/extractor/infra/file",
         "//swift/extractor/trap",
         "//swift/third_party/swift-llvm-support",
+        "@picosha2",
     ],
 )

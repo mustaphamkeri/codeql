@@ -31,11 +31,6 @@ std::string_view getTypeKindStr(const swift::TypeBase* type) {
 
 }  // namespace
 
-template <typename E>
-UntypedTrapLabel SwiftMangler::fetch(E&& e) {
-  return dispatcher.fetchLabel(std::forward<E>(e));
-}
-
 SwiftMangledName SwiftMangler::initMangled(const swift::TypeBase* type) {
   return SwiftMangledName() << getTypeKindStr(type) << '_';
 }
@@ -178,7 +173,6 @@ SwiftMangledName SwiftMangler::visitAnyGenericType(const swift::AnyGenericType* 
 }
 
 SwiftMangledName SwiftMangler::visitType(const swift::TypeBase* type) {
-  dispatcher.emitDebugInfo("no name for ", getTypeKindStr(type));
   return {};
 }
 
@@ -365,4 +359,20 @@ SwiftMangledName SwiftMangler::visitParametrizedProtocolType(
   }
   ret << '>';
   return ret;
+}
+
+SwiftMangledName::Part SwiftTrapMangler::fetch(const swift::Decl* decl) {
+  return dispatcher.fetchLabel(decl);
+}
+
+SwiftMangledName::Part SwiftTrapMangler::fetch(const swift::TypeBase* type) {
+  return dispatcher.fetchLabel(type);
+}
+
+SwiftMangledName::Part SwiftRecursiveMangler::fetch(const swift::Decl* decl) {
+  return mangleDecl(*decl).hash();
+}
+
+SwiftMangledName::Part SwiftRecursiveMangler::fetch(const swift::TypeBase* type) {
+  return mangleType(*type).hash();
 }
